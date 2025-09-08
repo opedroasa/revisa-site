@@ -21,9 +21,15 @@ public class MarcaController {
         this.marcaService = marcaService;
     }
 
-    // Listar todas marcas ativas
+    // Listar todas marcas
     @GetMapping
     public ResponseEntity<List<Marca>> listar() {
+        return ResponseEntity.ok(marcaService.listarMarcas());
+    }
+
+    // Listar todas marcas ativas
+    @GetMapping ("/ativas")
+    public ResponseEntity<List<Marca>> listarAtivas() {
         return ResponseEntity.ok(marcaService.listarMarcasAtivas());
     }
 
@@ -48,9 +54,16 @@ public class MarcaController {
     }
 
     // Inativar marca
-    @DeleteMapping("/{id}")
+    @DeleteMapping("/inativar/{id}")
     public ResponseEntity<Void> inativar(@PathVariable Long id) {
         marcaService.inativarMarca(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    // Excluir marca
+    @DeleteMapping("/excluir/{id}")
+    public ResponseEntity<Void> excluir(@PathVariable Long id) {
+        marcaService.excluirMarca(id);
         return ResponseEntity.noContent().build();
     }
 }

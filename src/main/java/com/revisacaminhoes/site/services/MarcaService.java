@@ -51,6 +51,19 @@ public class MarcaService {
         marcaRepository.save(marca);
     }
 
+    // Excluir marca
+    public void excluirMarca(Long id) {
+        if (!marcaRepository.existsById(id)) {
+            throw new RuntimeException("Marca não encontrada");
+        }
+        marcaRepository.deleteById(id);
+    }
+
+    // Buscar todas as marcas
+    public List<Marca> listarMarcas() {
+        return marcaRepository.findAll();
+    }
+
     // Buscar todas as marcas (ativas)
     public List<Marca> listarMarcasAtivas() {
         return marcaRepository.findByAtivoTrue();
