@@ -1,16 +1,13 @@
 package com.revisacaminhoes.site.controllers;
 
-import com.revisacaminhoes.site.entities.Marca;
+import com.revisacaminhoes.site.requestdto.MarcaRequestDTO;
+import com.revisacaminhoes.site.responsedto.MarcaResponseDTO;
 import com.revisacaminhoes.site.services.MarcaService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-/**
- * Controller REST para gerenciar marcas de caminhão.
- * Todas as operações pensadas para serem feitas pelo administrador.
- */
 @RestController
 @RequestMapping("/api/marcas")
 public class MarcaController {
@@ -23,19 +20,19 @@ public class MarcaController {
 
     // Listar todas marcas
     @GetMapping
-    public ResponseEntity<List<Marca>> listar() {
+    public ResponseEntity<List<MarcaResponseDTO>> listar() {
         return ResponseEntity.ok(marcaService.listarMarcas());
     }
 
     // Listar todas marcas ativas
-    @GetMapping ("/ativas")
-    public ResponseEntity<List<Marca>> listarAtivas() {
+    @GetMapping("/ativas")
+    public ResponseEntity<List<MarcaResponseDTO>> listarAtivas() {
         return ResponseEntity.ok(marcaService.listarMarcasAtivas());
     }
 
     // Buscar marca por ID
     @GetMapping("/{id}")
-    public ResponseEntity<Marca> buscar(@PathVariable Long id) {
+    public ResponseEntity<MarcaResponseDTO> buscar(@PathVariable Long id) {
         return marcaService.buscarPorId(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
@@ -43,20 +40,27 @@ public class MarcaController {
 
     // Criar nova marca
     @PostMapping
-    public ResponseEntity<Marca> criar(@RequestBody Marca marca) {
-        return ResponseEntity.ok(marcaService.criarMarca(marca));
+    public ResponseEntity<MarcaResponseDTO> criar(@RequestBody MarcaRequestDTO dto) {
+        return ResponseEntity.ok(marcaService.criarMarca(dto));
     }
 
     // Atualizar nome da marca
     @PutMapping("/{id}")
-    public ResponseEntity<Marca> atualizar(@PathVariable Long id, @RequestBody Marca marca) {
-        return ResponseEntity.ok(marcaService.atualizarMarca(id, marca.getNome()));
+    public ResponseEntity<MarcaResponseDTO> atualizar(@PathVariable Long id, @RequestBody MarcaRequestDTO dto) {
+        return ResponseEntity.ok(marcaService.atualizarMarca(id, dto));
     }
 
     // Inativar marca
-    @DeleteMapping("/inativar/{id}")
+    @PutMapping("/inativar/{id}")
     public ResponseEntity<Void> inativar(@PathVariable Long id) {
         marcaService.inativarMarca(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    // Ativar marca
+    @PutMapping("/ativar/{id}")
+    public ResponseEntity<Void> ativar(@PathVariable Long id) {
+        marcaService.ativarMarca(id);
         return ResponseEntity.noContent().build();
     }
 

@@ -23,11 +23,8 @@ public class Modelo {
     private Long id;
 
     // Nome do modelo (ex: FH, Stralis)
-    @Column(nullable = false)
+    @Column(nullable = false, unique = true)
     private String nome;
-
-    // Ano de fabricação
-    private Integer anoFabricacao;
 
     // Modelo ativo ou inativo
     @Column(nullable = false)

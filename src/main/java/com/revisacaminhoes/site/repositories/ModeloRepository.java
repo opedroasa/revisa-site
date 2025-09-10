@@ -1,6 +1,5 @@
 package com.revisacaminhoes.site.repositories;
 
-import com.revisacaminhoes.site.entities.Marca;
 import com.revisacaminhoes.site.entities.Modelo;
 import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;

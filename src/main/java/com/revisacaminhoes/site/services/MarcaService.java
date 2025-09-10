@@ -2,16 +2,15 @@ package com.revisacaminhoes.site.services;
 
 import com.revisacaminhoes.site.entities.Marca;
 import com.revisacaminhoes.site.repositories.MarcaRepository;
+import com.revisacaminhoes.site.requestdto.MarcaRequestDTO;
+import com.revisacaminhoes.site.responsedto.MarcaResponseDTO;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
-/**
- * Serviço com regras de negócio da Marca.
- * Inclui criação, atualização, inativação e listagem.
- */
 @Service
 public class MarcaService {
 
@@ -22,24 +21,32 @@ public class MarcaService {
     }
 
     // Criar nova marca
-    public Marca criarMarca(Marca marca) {
-        // Evita duplicidade de nome
-        if (marcaRepository.existsByNome(marca.getNome())) {
+    public MarcaResponseDTO criarMarca(MarcaRequestDTO dto) {
+        if (marcaRepository.existsByNome(dto.getNome())) {
             throw new RuntimeException("Já existe uma marca com esse nome!");
         }
-        marca.setAtivo(true);
-        marca.setCriadoEm(LocalDateTime.now());
-        marca.setAtualizadoEm(LocalDateTime.now());
-        return marcaRepository.save(marca);
+
+        Marca marca = Marca.builder()
+                .nome(dto.getNome())
+                .ativo(true)
+                .criadoEm(LocalDateTime.now())
+                .atualizadoEm(LocalDateTime.now())
+                .build();
+
+        Marca salva = marcaRepository.save(marca);
+        return toResponseDTO(salva);
     }
 
-    // Atualizar nome de marca existente
-    public Marca atualizarMarca(Long id, String novoNome) {
+    // Atualizar nome da marca
+    public MarcaResponseDTO atualizarMarca(Long id, MarcaRequestDTO dto) {
         Marca marca = marcaRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Marca não encontrada"));
-        marca.setNome(novoNome);
+
+        marca.setNome(dto.getNome());
         marca.setAtualizadoEm(LocalDateTime.now());
-        return marcaRepository.save(marca);
+
+        Marca atualizada = marcaRepository.save(marca);
+        return toResponseDTO(atualizada);
     }
 
     // Inativar marca
@@ -47,6 +54,15 @@ public class MarcaService {
         Marca marca = marcaRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Marca não encontrada"));
         marca.setAtivo(false);
+        marca.setAtualizadoEm(LocalDateTime.now());
+        marcaRepository.save(marca);
+    }
+
+    // Ativar marca
+    public void ativarMarca(Long id) {
+        Marca marca = marcaRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Marca não encontrada"));
+        marca.setAtivo(true);
         marca.setAtualizadoEm(LocalDateTime.now());
         marcaRepository.save(marca);
     }
@@ -59,18 +75,34 @@ public class MarcaService {
         marcaRepository.deleteById(id);
     }
 
-    // Buscar todas as marcas
-    public List<Marca> listarMarcas() {
-        return marcaRepository.findAll();
+    // Listar todas as marcas
+    public List<MarcaResponseDTO> listarMarcas() {
+        return marcaRepository.findAll()
+                .stream()
+                .map(this::toResponseDTO)
+                .collect(Collectors.toList());
     }
 
-    // Buscar todas as marcas (ativas)
-    public List<Marca> listarMarcasAtivas() {
-        return marcaRepository.findByAtivoTrue();
+    // Listar todas as marcas ativas
+    public List<MarcaResponseDTO> listarMarcasAtivas() {
+        return marcaRepository.findByAtivoTrue()
+                .stream()
+                .map(this::toResponseDTO)
+                .collect(Collectors.toList());
     }
 
-    // Buscar marca por ID
-    public Optional<Marca> buscarPorId(Long id) {
-        return marcaRepository.findById(id);
+    // Buscar por ID
+    public Optional<MarcaResponseDTO> buscarPorId(Long id) {
+        return marcaRepository.findById(id)
+                .map(this::toResponseDTO);
+    }
+
+    // Conversão para DTO
+    private MarcaResponseDTO toResponseDTO(Marca marca) {
+        return MarcaResponseDTO.builder()
+                .id(marca.getId())
+                .nome(marca.getNome())
+                .ativo(marca.getAtivo())
+                .build();
     }
 }

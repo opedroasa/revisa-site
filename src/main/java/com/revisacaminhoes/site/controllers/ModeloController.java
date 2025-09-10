@@ -1,6 +1,7 @@
 package com.revisacaminhoes.site.controllers;
 
-import com.revisacaminhoes.site.entities.Modelo;
+import com.revisacaminhoes.site.requestdto.ModeloRequestDTO;
+import com.revisacaminhoes.site.responsedto.ModeloResponseDTO;
 import com.revisacaminhoes.site.services.ModeloService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -9,6 +10,7 @@ import java.util.List;
 
 /**
  * Controller REST para gerenciar modelos de caminhão.
+ * Usa DTOs para entrada e saída.
  */
 @RestController
 @RequestMapping("/api/modelos")
@@ -20,27 +22,27 @@ public class ModeloController {
         this.modeloService = modeloService;
     }
 
-    // Listar todos os modelos, ativos e inativos
+    // Listar todos os modelos
     @GetMapping
-    public ResponseEntity<List<Modelo>> listarTodos() {
+    public ResponseEntity<List<ModeloResponseDTO>> listarTodos() {
         return ResponseEntity.ok(modeloService.listarModelos());
     }
 
-    // Listar todos modelos ativos
-    @GetMapping ("/ativos")
-    public ResponseEntity<List<Modelo>> listarAtivos() {
+    // Listar modelos ativos
+    @GetMapping("/ativos")
+    public ResponseEntity<List<ModeloResponseDTO>> listarAtivos() {
         return ResponseEntity.ok(modeloService.listarModelosAtivos());
     }
 
     // Listar modelos de uma marca
     @GetMapping("/marca/{marcaId}")
-    public ResponseEntity<List<Modelo>> listarPorMarca(@PathVariable Long marcaId) {
+    public ResponseEntity<List<ModeloResponseDTO>> listarPorMarca(@PathVariable Long marcaId) {
         return ResponseEntity.ok(modeloService.listarPorMarca(marcaId));
     }
 
     // Buscar modelo por ID
     @GetMapping("/{id}")
-    public ResponseEntity<Modelo> buscar(@PathVariable Long id) {
+    public ResponseEntity<ModeloResponseDTO> buscar(@PathVariable Long id) {
         return modeloService.buscarPorId(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
@@ -48,22 +50,30 @@ public class ModeloController {
 
     // Criar modelo
     @PostMapping
-    public ResponseEntity<Modelo> criar(@RequestBody Modelo modelo) {
-        return ResponseEntity.ok(modeloService.criarModelo(modelo));
+    public ResponseEntity<ModeloResponseDTO> criar(@RequestBody ModeloRequestDTO dto) {
+        return ResponseEntity.ok(modeloService.criarModelo(dto));
     }
 
     // Atualizar modelo
     @PutMapping("/{id}")
-    public ResponseEntity<Modelo> atualizar(@PathVariable Long id, @RequestBody Modelo modelo) {
-        return ResponseEntity.ok(
-                modeloService.atualizarModelo(id, modelo.getNome(), modelo.getAnoFabricacao())
-        );
+    public ResponseEntity<ModeloResponseDTO> atualizar(
+            @PathVariable Long id,
+            @RequestBody ModeloRequestDTO dto
+    ) {
+        return ResponseEntity.ok(modeloService.atualizarModelo(id, dto));
     }
 
     // Inativar modelo
-    @DeleteMapping("/inativar/{id}")
+    @PutMapping("/inativar/{id}")
     public ResponseEntity<Void> inativar(@PathVariable Long id) {
         modeloService.inativarModelo(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    // Ativar modelo
+    @PutMapping("/ativar/{id}")
+    public ResponseEntity<Void> ativar(@PathVariable Long id) {
+        modeloService.ativarModelo(id);
         return ResponseEntity.noContent().build();
     }
 
@@ -73,5 +83,4 @@ public class ModeloController {
         modeloService.excluirModelo(id);
         return ResponseEntity.noContent().build();
     }
-
 }

@@ -1,5 +1,7 @@
 package com.revisacaminhoes.site.services;
 
+import com.revisacaminhoes.site.requestdto.ModeloRequestDTO;
+import com.revisacaminhoes.site.responsedto.ModeloResponseDTO;
 import com.revisacaminhoes.site.entities.Marca;
 import com.revisacaminhoes.site.entities.Modelo;
 import com.revisacaminhoes.site.repositories.MarcaRepository;
@@ -9,9 +11,11 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 /**
  * Serviço com regras de negócio do Modelo.
+ * Agora trabalha com DTOs para não expor entidades diretamente.
  */
 @Service
 public class ModeloService {
@@ -24,30 +28,40 @@ public class ModeloService {
         this.marcaRepository = marcaRepository;
     }
 
-    // Criar novo modelo
-    public Modelo criarModelo(Modelo modelo) {
-        // Verifica se a marca existe
-        Marca marca = marcaRepository.findById(modelo.getMarca().getId())
+    // Criar novo modelo a partir do DTO
+    public ModeloResponseDTO criarModelo(ModeloRequestDTO dto) {
+        Marca marca = marcaRepository.findById(dto.getMarcaId())
                 .orElseThrow(() -> new RuntimeException("Marca não encontrada"));
 
-        modelo.setMarca(marca);
-        modelo.setAtivo(true);
-        modelo.setCriadoEm(LocalDateTime.now());
-        modelo.setAtualizadoEm(LocalDateTime.now());
+        Modelo modelo = Modelo.builder()
+                .nome(dto.getNome())
+                .ativo(true)
+                .criadoEm(LocalDateTime.now())
+                .atualizadoEm(LocalDateTime.now())
+                .marca(marca)
+                .build();
 
-        return modeloRepository.save(modelo);
+        Modelo salvo = modeloRepository.save(modelo);
+        return toResponseDTO(salvo);
     }
 
-    // Atualizar nome e ano do modelo
-    public Modelo atualizarModelo(Long id, String novoNome, Integer novoAnoFabricacao) {
+    // Atualizar modelo existente
+    public ModeloResponseDTO atualizarModelo(Long id, ModeloRequestDTO dto) {
         Modelo modelo = modeloRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Modelo não encontrado"));
 
-        modelo.setNome(novoNome);
-        modelo.setAnoFabricacao(novoAnoFabricacao);
+        modelo.setNome(dto.getNome());
+
+        if (dto.getMarcaId() != null) {
+            Marca marca = marcaRepository.findById(dto.getMarcaId())
+                    .orElseThrow(() -> new RuntimeException("Marca não encontrada"));
+            modelo.setMarca(marca);
+        }
+
         modelo.setAtualizadoEm(LocalDateTime.now());
 
-        return modeloRepository.save(modelo);
+        Modelo atualizado = modeloRepository.save(modelo);
+        return toResponseDTO(atualizado);
     }
 
     // Inativar modelo
@@ -56,6 +70,18 @@ public class ModeloService {
                 .orElseThrow(() -> new RuntimeException("Modelo não encontrado"));
 
         modelo.setAtivo(false);
+        modelo.setAtualizadoEm(LocalDateTime.now());
+        modeloRepository.save(modelo);
+
+    }
+
+    // Ativar modelo
+    public void ativarModelo(Long id) {
+        Modelo modelo = modeloRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Modelo não encontrado"));
+
+
+        modelo.setAtivo(true);
         modelo.setAtualizadoEm(LocalDateTime.now());
         modeloRepository.save(modelo);
     }
@@ -69,23 +95,39 @@ public class ModeloService {
     }
 
     // Listar todos os modelos
-    public List<Modelo> listarModelos() {
-        return modeloRepository.findAll();
+    public List<ModeloResponseDTO> listarModelos() {
+        return modeloRepository.findAll().stream()
+                .map(this::toResponseDTO)
+                .collect(Collectors.toList());
     }
 
-    // Listar todos os modelos (ativos)
-    public List<Modelo> listarModelosAtivos() {
-        return modeloRepository.findByAtivoTrue();
+    // Listar modelos ativos
+    public List<ModeloResponseDTO> listarModelosAtivos() {
+        return modeloRepository.findByAtivoTrue().stream()
+                .map(this::toResponseDTO)
+                .collect(Collectors.toList());
     }
 
-    // Listar modelos de uma marca específica
-    public List<Modelo> listarPorMarca(Long marcaId) {
-        return modeloRepository.findByMarcaId(marcaId);
+    // Listar por marca
+    public List<ModeloResponseDTO> listarPorMarca(Long marcaId) {
+        return modeloRepository.findByMarcaId(marcaId).stream()
+                .map(this::toResponseDTO)
+                .collect(Collectors.toList());
     }
 
-    // Buscar modelo por ID
-    public Optional<Modelo> buscarPorId(Long id) {
-        return modeloRepository.findById(id);
+    // Buscar por ID
+    public Optional<ModeloResponseDTO> buscarPorId(Long id) {
+        return modeloRepository.findById(id).map(this::toResponseDTO);
     }
 
+    // Conversão para ResponseDTO
+    private ModeloResponseDTO toResponseDTO(Modelo modelo) {
+        return ModeloResponseDTO.builder()
+                .id(modelo.getId())
+                .nome(modelo.getNome())
+                .ativo(modelo.getAtivo())
+                .marcaNome(modelo.getMarca().getNome())
+                .marcaId(modelo.getMarca().getId())
+                .build();
+    }
 }
