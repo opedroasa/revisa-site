@@ -1,7 +1,6 @@
 package com.revisacaminhoes.site.repositories;
 
 import com.revisacaminhoes.site.entities.CompatibilidadeProduto;
-import com.revisacaminhoes.site.entities.Produto;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -9,9 +8,18 @@ import org.springframework.data.repository.query.Param;
 import java.util.List;
 
 public interface CompatibilidadeProdutoRepository extends JpaRepository<CompatibilidadeProduto, Long> {
-    // Buscar produtos que servem para um modelo específico e ano
-    @Query("SELECT cp.produto FROM CompatibilidadeProduto cp " +
-            "WHERE cp.modelo.id = :modeloId " +
-            "AND :ano BETWEEN cp.anoInicial AND cp.anoFinal")
-    List<Produto> findProdutosCompatíveis(@Param("modeloId") Long modeloId, @Param("ano") Integer ano);
+
+    @Query("SELECT cp FROM CompatibilidadeProduto cp " +
+            "JOIN FETCH cp.produto p " +
+            "JOIN FETCH cp.modelo m " +
+            "JOIN FETCH m.marca ma " +
+            "WHERE (:marcaId IS NULL OR ma.id = :marcaId) " +
+            "AND (:modeloId IS NULL OR m.id = :modeloId) " +
+            "AND (:ano IS NULL OR :ano BETWEEN cp.anoInicial AND cp.anoFinal) " +
+            "AND p.ativo = true")
+    List<CompatibilidadeProduto> buscarProdutosCompatíveis(
+            @Param("marcaId") Long marcaId,
+            @Param("modeloId") Long modeloId,
+            @Param("ano") Integer ano
+    );
 }

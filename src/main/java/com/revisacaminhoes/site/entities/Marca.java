@@ -2,7 +2,10 @@ package com.revisacaminhoes.site.entities;
 
 import jakarta.persistence.*;
 import lombok.*;
+
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Entidade Marca do caminhão.
@@ -34,4 +37,13 @@ public class Marca {
 
     // Data de atualização
     private LocalDateTime atualizadoEm = LocalDateTime.now();
+
+    // Relacionamento com modelos
+    @OneToMany(
+            mappedBy = "marca",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true,
+            fetch = FetchType.LAZY
+    )
+    private List<Modelo> modelos = new ArrayList<>();
 }

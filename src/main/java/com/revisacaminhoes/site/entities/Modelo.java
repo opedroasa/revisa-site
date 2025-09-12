@@ -3,12 +3,8 @@ package com.revisacaminhoes.site.entities;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
+import java.util.*;
 
-/**
- * Entidade Modelo de caminhão.
- * Cada modelo pertence a uma Marca.
- * Administrador pode cadastrar, atualizar, inativar e excluir modelos.
- */
 @Entity
 @Table(name = "modelo")
 @Getter
@@ -37,7 +33,16 @@ public class Modelo {
     private LocalDateTime atualizadoEm = LocalDateTime.now();
 
     // Relação com a Marca
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "marca_id", nullable = false)
     private Marca marca;
+
+    // Relacionamento com compatibilidades
+    @OneToMany(
+            mappedBy = "modelo",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true,
+            fetch = FetchType.LAZY
+    )
+    private List<CompatibilidadeProduto> compatibilidades = new ArrayList<>();
 }
