@@ -172,7 +172,15 @@ public class ProdutoService {
                                         .anoInicial(c.getAnoInicial())
                                         .anoFinal(c.getAnoFinal())
                                         .build()
-                        ).collect(Collectors.toList()) : null
+                        ).toList() : null
+                )
+                .fotos(produto.getFotos() != null ?
+                        produto.getFotos().stream().map(f ->
+                                ProdutoFotoResponseDTO.builder()
+                                        .id(f.getId())
+                                        .url(f.getUrl())
+                                        .build()
+                        ).toList() : null
                 )
                 .build();
     }

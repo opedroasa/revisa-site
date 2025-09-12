@@ -40,6 +40,16 @@ public class Produto {
             orphanRemoval = true,
             fetch = FetchType.LAZY
     )
-    @Builder.Default // garante que mesmo usando o builder, a lista não fica null
+    @Builder.Default
     private List<CompatibilidadeProduto> compatibilidades = new ArrayList<>();
+
+    // Relacionamento com fotos
+    @OneToMany(
+            mappedBy = "produto",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true,
+            fetch = FetchType.LAZY
+    )
+    @Builder.Default
+    private List<ProdutoFoto> fotos = new ArrayList<>();
 }

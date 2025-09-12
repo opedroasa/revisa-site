@@ -13,5 +13,10 @@ public class ProdutoResponseDTO {
     private BigDecimal preco;
     private Integer estoque;
     private Boolean ativo;
+
+    // Compatibilidades
     private List<CompatibilidadeProdutoResponseDTO> compatibilidades;
+
+    // Fotos
+    private List<ProdutoFotoResponseDTO> fotos;
 }
