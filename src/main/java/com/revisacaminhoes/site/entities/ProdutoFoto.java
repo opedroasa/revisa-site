@@ -12,11 +12,14 @@ public class ProdutoFoto {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // URL da imagem (armazenada em nuvem)
+    // URL pública da imagem
     @Column(nullable = false)
     private String url;
 
-    // Produto ao qual a foto pertence
+    // Identificador do Cloudinary (necessário para excluir)
+    @Column(nullable = false)
+    private String publicId;
+
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "produto_id", nullable = false)
     private Produto produto;
