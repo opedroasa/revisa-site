@@ -12,7 +12,7 @@
 	<artifactId>site</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<name>site</name>
-	<description>Site for Revisa Caminhões</description>
+	<description>Site: Revisa Caminhões</description>
 	<url/>
 	<licenses>
 		<license/>
@@ -80,6 +80,11 @@
 			<groupId>org.springframework.security</groupId>
 			<artifactId>spring-security-test</artifactId>
 			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>com.cloudinary</groupId>
+			<artifactId>cloudinary-http44</artifactId>
+			<version>1.33.0</version>
 		</dependency>
 	</dependencies>
 

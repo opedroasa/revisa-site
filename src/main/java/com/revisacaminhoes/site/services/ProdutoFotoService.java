@@ -14,10 +14,13 @@ public class ProdutoFotoService {
 
     private final ProdutoRepository produtoRepository;
     private final ProdutoFotoRepository fotoRepository;
+    private final UploadService uploadService;
 
-    public ProdutoFotoService(ProdutoRepository produtoRepository, ProdutoFotoRepository fotoRepository) {
+    public ProdutoFotoService(ProdutoRepository produtoRepository, ProdutoFotoRepository fotoRepository, UploadService uploadService) {
         this.produtoRepository = produtoRepository;
         this.fotoRepository = fotoRepository;
+        this.uploadService = uploadService;
+
     }
 
     // Adicionar foto ao produto
@@ -27,6 +30,7 @@ public class ProdutoFotoService {
 
         ProdutoFoto foto = ProdutoFoto.builder()
                 .url(dto.getUrl())
+                .publicId(dto.getPublicId())
                 .produto(produto)
                 .build();
 
@@ -43,16 +47,21 @@ public class ProdutoFotoService {
 
     // Remover foto específica
     public void excluirFoto(Long fotoId) {
-        if (!fotoRepository.existsById(fotoId)) {
-            throw new RuntimeException("Foto não encontrada");
+        ProdutoFoto foto = fotoRepository.findById(fotoId)
+                .orElseThrow(() -> new RuntimeException("Foto não encontrada"));
+
+        if (foto.getPublicId() != null) {
+            uploadService.deletarImagem(foto.getPublicId());
         }
-        fotoRepository.deleteById(fotoId);
+
+        fotoRepository.delete(foto);
     }
 
     private ProdutoFotoResponseDTO toResponse(ProdutoFoto foto) {
         return ProdutoFotoResponseDTO.builder()
                 .id(foto.getId())
                 .url(foto.getUrl())
+                .publicId(foto.getPublicId())
                 .build();
     }
 }

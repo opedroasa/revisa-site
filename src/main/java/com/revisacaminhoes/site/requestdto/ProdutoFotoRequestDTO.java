@@ -4,5 +4,6 @@ import lombok.*;
 
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class ProdutoFotoRequestDTO {
-    private String url; // URL da imagem enviada pelo admin
+    private String url;
+    private String publicId;
 }

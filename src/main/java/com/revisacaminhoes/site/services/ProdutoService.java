@@ -1,10 +1,18 @@
 package com.revisacaminhoes.site.services;
 
-import com.revisacaminhoes.site.entities.*;
-import com.revisacaminhoes.site.repositories.*;
-import com.revisacaminhoes.site.requestdto.*;
-import com.revisacaminhoes.site.responsedto.*;
+import com.revisacaminhoes.site.entities.CompatibilidadeProduto;
+import com.revisacaminhoes.site.entities.Modelo;
+import com.revisacaminhoes.site.entities.Produto;
+import com.revisacaminhoes.site.repositories.CompatibilidadeProdutoRepository;
+import com.revisacaminhoes.site.repositories.ModeloRepository;
+import com.revisacaminhoes.site.repositories.ProdutoRepository;
+import com.revisacaminhoes.site.requestdto.CompatibilidadeProdutoRequestDTO;
+import com.revisacaminhoes.site.requestdto.ProdutoRequestDTO;
+import com.revisacaminhoes.site.responsedto.CompatibilidadeProdutoResponseDTO;
+import com.revisacaminhoes.site.responsedto.ProdutoFotoResponseDTO;
+import com.revisacaminhoes.site.responsedto.ProdutoResponseDTO;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -16,18 +24,23 @@ public class ProdutoService {
     private final ProdutoRepository produtoRepository;
     private final CompatibilidadeProdutoRepository compatibilidadeRepository;
     private final ModeloRepository modeloRepository;
+    private final UploadService uploadService; // ✅ INJETADO
 
     public ProdutoService(
             ProdutoRepository produtoRepository,
             CompatibilidadeProdutoRepository compatibilidadeRepository,
-            ModeloRepository modeloRepository
+            ModeloRepository modeloRepository,
+            UploadService uploadService // ✅ INJETADO NO CONSTRUTOR
     ) {
         this.produtoRepository = produtoRepository;
         this.compatibilidadeRepository = compatibilidadeRepository;
         this.modeloRepository = modeloRepository;
+        this.uploadService = uploadService;
     }
 
-    // Criar produto com compatibilidades
+    // ===== CRUD BÁSICO =====
+
+    @Transactional
     public ProdutoResponseDTO criarProduto(ProdutoRequestDTO dto) {
         Produto produto = Produto.builder()
                 .nome(dto.getNome())
@@ -39,7 +52,7 @@ public class ProdutoService {
                 .atualizadoEm(LocalDateTime.now())
                 .build();
 
-        // Compatibilidades (apenas modeloId, anoInicial, anoFinal)
+        // Valida compatibilidades ANTES de salvar
         if (dto.getCompatibilidades() != null) {
             for (CompatibilidadeProdutoRequestDTO c : dto.getCompatibilidades()) {
                 Modelo modelo = modeloRepository.findById(c.getModeloId())
@@ -60,7 +73,7 @@ public class ProdutoService {
         return toResponse(salvo);
     }
 
-    // Atualizar produto
+    @Transactional
     public ProdutoResponseDTO atualizarProduto(Long id, ProdutoRequestDTO dto) {
         Produto produto = produtoRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Produto não encontrado"));
@@ -71,10 +84,8 @@ public class ProdutoService {
         produto.setEstoque(dto.getEstoque());
         produto.setAtualizadoEm(LocalDateTime.now());
 
-        // Limpa compatibilidades antigas
+        // Recria compatibilidades (só salva se todas forem válidas)
         produto.getCompatibilidades().clear();
-
-        // Recria compatibilidades
         if (dto.getCompatibilidades() != null) {
             for (CompatibilidadeProdutoRequestDTO c : dto.getCompatibilidades()) {
                 Modelo modelo = modeloRepository.findById(c.getModeloId())
@@ -95,7 +106,6 @@ public class ProdutoService {
         return toResponse(atualizado);
     }
 
-    // Ativar produto
     public void ativarProduto(Long id) {
         Produto produto = produtoRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Produto não encontrado"));
@@ -104,7 +114,6 @@ public class ProdutoService {
         produtoRepository.save(produto);
     }
 
-    // Inativar produto
     public void inativarProduto(Long id) {
         Produto produto = produtoRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Produto não encontrado"));
@@ -113,22 +122,34 @@ public class ProdutoService {
         produtoRepository.save(produto);
     }
 
-    // Excluir produto
+    @Transactional
     public void excluirProduto(Long id) {
-        if (!produtoRepository.existsById(id)) {
-            throw new RuntimeException("Produto não encontrado");
-        }
-        produtoRepository.deleteById(id);
+        Produto produto = produtoRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Produto não encontrado"));
+
+        // Excluir imagens no Cloudinary antes de remover do banco
+        produto.getFotos().forEach(f -> {
+            // Pode existir dado antigo sem publicId; proteja
+            try {
+                // se você deixou NOT NULL, esse if é opcional
+                var publicIdField = f.getPublicId();
+                if (publicIdField != null && !publicIdField.isBlank()) {
+                    uploadService.deletarImagem(publicIdField);
+                }
+            } catch (Exception ignored) {
+                // não derrube a exclusão do produto se um delete de imagem falhar
+            }
+        });
+
+        produtoRepository.delete(produto);
     }
 
-    // Listar todos os produtos
     public List<ProdutoResponseDTO> listarTodos() {
         return produtoRepository.findAll().stream()
                 .map(this::toResponse)
                 .collect(Collectors.toList());
     }
 
-    // Listar produtos ativos
     public List<ProdutoResponseDTO> listarAtivos() {
         return produtoRepository.findAll().stream()
                 .filter(Produto::getAtivo)
@@ -136,16 +157,15 @@ public class ProdutoService {
                 .collect(Collectors.toList());
     }
 
-    // Buscar produto por ID
     public ProdutoResponseDTO buscarPorId(Long id) {
         Produto produto = produtoRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Produto não encontrado"));
         return toResponse(produto);
     }
 
-    // Buscar por filtro (marcaId, modeloId, ano)
     public List<ProdutoResponseDTO> buscarPorFiltro(Long marcaId, Long modeloId, Integer ano) {
-        List<CompatibilidadeProduto> compatibilidades = compatibilidadeRepository.buscarProdutosCompatíveis(marcaId, modeloId, ano);
+        List<CompatibilidadeProduto> compatibilidades =
+                compatibilidadeRepository.buscarProdutosCompatíveis(marcaId, modeloId, ano);
 
         return compatibilidades.stream()
                 .map(CompatibilidadeProduto::getProduto)
@@ -154,7 +174,49 @@ public class ProdutoService {
                 .collect(Collectors.toList());
     }
 
-    // Conversão para ResponseDTO
+    // ===== AJUSTE DE ESTOQUE =====
+
+    public ProdutoResponseDTO definirEstoque(Long id, int quantidade) {
+        if (quantidade < 0) throw new RuntimeException("Quantidade não pode ser negativa.");
+        Produto produto = produtoRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Produto não encontrado"));
+
+        produto.setEstoque(quantidade);
+        produto.setAtualizadoEm(LocalDateTime.now());
+        produtoRepository.save(produto);
+
+        return toResponse(produto);
+    }
+
+    public ProdutoResponseDTO entradaEstoque(Long id, int quantidade) {
+        if (quantidade <= 0) throw new RuntimeException("Quantidade deve ser maior que zero.");
+        Produto produto = produtoRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Produto não encontrado"));
+
+        produto.setEstoque(produto.getEstoque() + quantidade);
+        produto.setAtualizadoEm(LocalDateTime.now());
+        produtoRepository.save(produto);
+
+        return toResponse(produto);
+    }
+
+    public ProdutoResponseDTO saidaEstoque(Long id, int quantidade) {
+        if (quantidade <= 0) throw new RuntimeException("Quantidade deve ser maior que zero.");
+        Produto produto = produtoRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Produto não encontrado"));
+
+        int novoEstoque = produto.getEstoque() - quantidade;
+        if (novoEstoque < 0) throw new RuntimeException("Saída maior que o estoque disponível.");
+
+        produto.setEstoque(novoEstoque);
+        produto.setAtualizadoEm(LocalDateTime.now());
+        produtoRepository.save(produto);
+
+        return toResponse(produto);
+    }
+
+    // ===== CONVERSÃO =====
+
     private ProdutoResponseDTO toResponse(Produto produto) {
         return ProdutoResponseDTO.builder()
                 .id(produto.getId())
@@ -163,24 +225,25 @@ public class ProdutoService {
                 .preco(produto.getPreco())
                 .estoque(produto.getEstoque())
                 .ativo(produto.getAtivo())
-                .compatibilidades(produto.getCompatibilidades() != null ?
-                        produto.getCompatibilidades().stream().map(c ->
-                                CompatibilidadeProdutoResponseDTO.builder()
+                .compatibilidades(
+                        produto.getCompatibilidades().stream()
+                                .map(c -> CompatibilidadeProdutoResponseDTO.builder()
                                         .id(c.getId())
                                         .modeloNome(c.getModelo().getNome())
                                         .marcaNome(c.getModelo().getMarca().getNome())
                                         .anoInicial(c.getAnoInicial())
                                         .anoFinal(c.getAnoFinal())
-                                        .build()
-                        ).toList() : null
+                                        .build())
+                                .collect(Collectors.toList())
                 )
-                .fotos(produto.getFotos() != null ?
-                        produto.getFotos().stream().map(f ->
-                                ProdutoFotoResponseDTO.builder()
+                .fotos(
+                        produto.getFotos().stream()
+                                .map(f -> ProdutoFotoResponseDTO.builder()
                                         .id(f.getId())
                                         .url(f.getUrl())
-                                        .build()
-                        ).toList() : null
+                                        .publicId(f.getPublicId())
+                                        .build())
+                                .collect(Collectors.toList())
                 )
                 .build();
     }
