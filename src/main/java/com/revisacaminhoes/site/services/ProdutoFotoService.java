@@ -4,7 +4,9 @@ import com.revisacaminhoes.site.entities.*;
 import com.revisacaminhoes.site.repositories.*;
 import com.revisacaminhoes.site.requestdto.*;
 import com.revisacaminhoes.site.responsedto.*;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -15,6 +17,9 @@ public class ProdutoFotoService {
     private final ProdutoRepository produtoRepository;
     private final ProdutoFotoRepository fotoRepository;
     private final UploadService uploadService;
+
+    @Autowired
+    private ProdutoFotoRepository fotoRepo;
 
     public ProdutoFotoService(ProdutoRepository produtoRepository, ProdutoFotoRepository fotoRepository, UploadService uploadService) {
         this.produtoRepository = produtoRepository;
@@ -63,5 +68,19 @@ public class ProdutoFotoService {
                 .url(foto.getUrl())
                 .publicId(foto.getPublicId())
                 .build();
+    }
+
+    @Transactional
+    public void definirDestaque(Long produtoId, Long fotoId) {
+        List<ProdutoFoto> fotos = fotoRepo.findByProdutoId(produtoId);
+        if (fotos.isEmpty()) throw new RuntimeException("Produto sem fotos");
+
+        boolean pertence = fotos.stream().anyMatch(f -> f.getId().equals(fotoId));
+        if (!pertence) throw new RuntimeException("Foto não pertence ao produto");
+
+        for (ProdutoFoto f : fotos) {
+            f.setDestaque(f.getId().equals(fotoId));
+        }
+        fotoRepo.saveAll(fotos);
     }
 }

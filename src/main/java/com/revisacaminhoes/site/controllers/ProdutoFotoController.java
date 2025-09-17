@@ -5,6 +5,7 @@ import com.revisacaminhoes.site.requestdto.ProdutoFotoRequestDTO;
 import com.revisacaminhoes.site.responsedto.ProdutoFotoResponseDTO;
 import com.revisacaminhoes.site.services.ProdutoFotoService;
 import com.revisacaminhoes.site.services.UploadService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -19,6 +20,9 @@ public class ProdutoFotoController {
     private final ProdutoFotoService fotoService;
     private final UploadService uploadService; // injeção do serviço de upload
     private final ProdutoRepository produtoRepository;
+
+    @Autowired
+    private ProdutoFotoService service;
 
 
     public ProdutoFotoController(ProdutoFotoService fotoService, UploadService uploadService, ProdutoRepository produtoRepository
@@ -69,4 +73,13 @@ public class ProdutoFotoController {
 
         return ResponseEntity.ok(fotoService.adicionarFoto(produtoId, dto));
     }
+
+    @PutMapping("/{produtoId}/fotos/{fotoId}/destaque")
+    public ResponseEntity<Void> definirDestaque(
+            @PathVariable Long produtoId,
+            @PathVariable Long fotoId) {
+        service.definirDestaque(produtoId, fotoId);
+        return ResponseEntity.noContent().build(); // 204
+    }
+
 }

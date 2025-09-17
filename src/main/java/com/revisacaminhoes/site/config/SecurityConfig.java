@@ -29,31 +29,30 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        // ROTAS PÚBLICAS (consulta)
-        // GET de produtos, fotos, marcas e modelos liberados
         http.csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
-                        // Auth
-                        //.requestMatchers("/api/auth/register").permitAll() // para bootstrap inicial
-                        .requestMatchers("/api/auth/register").hasRole("ADMIN") // depois de criado usuarios
+                        // Libera preflight
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                        // Produtos - consulta pública
+                        // Auth
+                        .requestMatchers("/api/auth/register").hasRole("ADMIN")
+
+                        // Públicos (vitrine)
                         .requestMatchers(HttpMethod.GET, "/api/produtos/**").permitAll()
-                        // Marcas e Modelos - consulta pública
                         .requestMatchers(HttpMethod.GET, "/api/marcas/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/modelos/**").permitAll()
-                        // Fotos de produto - listagem pública
                         .requestMatchers(HttpMethod.GET, "/api/produtos/*/fotos/**").permitAll()
 
-                        // TUDO QUE É DE ALTERAÇÃO REQUER ADMIN
+                        // Mutações só admin
                         .requestMatchers(HttpMethod.POST, "/api/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.PUT, "/api/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.DELETE, "/api/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT,  "/api/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE,"/api/**").hasRole("ADMIN")
 
-                        // Qualquer outra rota precisa estar autenticada
                         .anyRequest().authenticated()
                 )
-                .httpBasic(Customizer.withDefaults()); // para testar fácil no Postman (Basic Auth)
+                // 401 sem "WWW-Authenticate: Basic" (evita popup do navegador)
+                .exceptionHandling(e -> e.authenticationEntryPoint((req, res, ex) -> res.sendError(401)))
+                .httpBasic(Customizer.withDefaults());
 
         return http.build();
     }

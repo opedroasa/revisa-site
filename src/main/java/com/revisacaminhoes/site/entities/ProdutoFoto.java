@@ -23,4 +23,7 @@ public class ProdutoFoto {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "produto_id", nullable = false)
     private Produto produto;
+
+    @Column(nullable = false)
+    private boolean destaque = false;
 }
