@@ -33,6 +33,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // Libera preflight
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        //.requestMatchers("/api/auth/register").permitAll() // para criar o primeiro usuario
+                        //.requestMatchers("/api/auth/register").hasRole("ADMIN") // depois de criado usuario
 
                         // Auth
                         .requestMatchers("/api/auth/register").hasRole("ADMIN")
