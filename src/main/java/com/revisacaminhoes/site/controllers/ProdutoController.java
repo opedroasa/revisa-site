@@ -1,8 +1,13 @@
 package com.revisacaminhoes.site.controllers;
 
 import com.revisacaminhoes.site.requestdto.ProdutoRequestDTO;
+import com.revisacaminhoes.site.responsedto.ProdutoListItemDTO;
 import com.revisacaminhoes.site.responsedto.ProdutoResponseDTO;
 import com.revisacaminhoes.site.services.ProdutoService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -13,56 +18,47 @@ import java.util.List;
 public class ProdutoController {
 
     private final ProdutoService produtoService;
-
     public ProdutoController(ProdutoService produtoService) {
         this.produtoService = produtoService;
     }
 
-    // GET listar todos os produtos
     @GetMapping
     public ResponseEntity<List<ProdutoResponseDTO>> listarTodos() {
         return ResponseEntity.ok(produtoService.listarTodos());
     }
 
-    // GET listar todos os produtos ativos
     @GetMapping("/ativos")
     public ResponseEntity<List<ProdutoResponseDTO>> listarAtivos() {
         return ResponseEntity.ok(produtoService.listarAtivos());
     }
 
-    // GET buscar produto específico
     @GetMapping("/{id}")
     public ResponseEntity<ProdutoResponseDTO> buscarPorId(@PathVariable Long id) {
         return ResponseEntity.ok(produtoService.buscarPorId(id));
     }
 
-    // POST criar produto
     @PostMapping
     public ResponseEntity<ProdutoResponseDTO> criar(@RequestBody ProdutoRequestDTO dto) {
         return ResponseEntity.ok(produtoService.criarProduto(dto));
     }
 
-    // PUT atualizar produto
     @PutMapping("/{id}")
     public ResponseEntity<ProdutoResponseDTO> atualizar(@PathVariable Long id, @RequestBody ProdutoRequestDTO dto) {
         return ResponseEntity.ok(produtoService.atualizarProduto(id, dto));
     }
 
-    // PUT inativar produto
     @PutMapping("/inativar/{id}")
     public ResponseEntity<Void> inativar(@PathVariable Long id) {
         produtoService.inativarProduto(id);
         return ResponseEntity.noContent().build();
     }
 
-    // PUT ativar produto
     @PutMapping("/ativar/{id}")
     public ResponseEntity<Void> ativar(@PathVariable Long id) {
         produtoService.ativarProduto(id);
         return ResponseEntity.noContent().build();
     }
 
-    // DELETE excluir produto
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> excluir(@PathVariable Long id) {
         produtoService.excluirProduto(id);
@@ -78,4 +74,32 @@ public class ProdutoController {
         return ResponseEntity.ok(produtoService.buscarPorFiltro(marcaId, modeloId, ano));
     }
 
+    // /api/produtos/page?page=0&size=20&sort=nome,asc
+    @GetMapping("/page")
+    public ResponseEntity<Page<ProdutoListItemDTO>> listarPage(
+            @PageableDefault(page = 0, size = 20, sort = "id", direction = Sort.Direction.ASC) Pageable pageable,
+            @RequestParam(required = false, defaultValue = "true") Boolean somenteAtivos
+    ) {
+        Page<ProdutoListItemDTO> page = produtoService.listarPaginado(Boolean.TRUE.equals(somenteAtivos), pageable);
+        return ResponseEntity.ok(page);
+    }
+
+    // /api/produtos/page/filtro?marcaId=1&modeloId=1&ano=2015&q=correia&page=0&size=20&sort=nome,asc
+    @GetMapping("/page/filtro")
+    public ResponseEntity<Page<ProdutoListItemDTO>> listarPageFiltrado(
+            @RequestParam(required = false) Long marcaId,
+            @RequestParam(required = false) Long modeloId,
+            @RequestParam(required = false) Integer ano,
+            @RequestParam(required = false) String q,
+            @RequestParam(required = false, defaultValue = "true") Boolean somenteAtivos,
+            @PageableDefault(page = 0, size = 20, sort = "id", direction = Sort.Direction.ASC) Pageable pageable
+    ) {
+        Page<ProdutoListItemDTO> page = produtoService.listarPaginadoFiltrado(
+                marcaId, modeloId, ano,
+                Boolean.TRUE.equals(somenteAtivos),
+                pageable,
+                q
+        );
+        return ResponseEntity.ok(page);
+    }
 }
