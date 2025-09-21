@@ -5,17 +5,22 @@ import com.revisacaminhoes.site.entities.Modelo;
 import com.revisacaminhoes.site.entities.Produto;
 import com.revisacaminhoes.site.repositories.CompatibilidadeProdutoRepository;
 import com.revisacaminhoes.site.repositories.ModeloRepository;
+import com.revisacaminhoes.site.repositories.ProdutoFotoRepository;
 import com.revisacaminhoes.site.repositories.ProdutoRepository;
+import com.revisacaminhoes.site.repositories.projections.FotoDestaqueRow;
 import com.revisacaminhoes.site.requestdto.CompatibilidadeProdutoRequestDTO;
 import com.revisacaminhoes.site.requestdto.ProdutoRequestDTO;
 import com.revisacaminhoes.site.responsedto.CompatibilidadeProdutoResponseDTO;
 import com.revisacaminhoes.site.responsedto.ProdutoFotoResponseDTO;
+import com.revisacaminhoes.site.responsedto.ProdutoListItemDTO;
 import com.revisacaminhoes.site.responsedto.ProdutoResponseDTO;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -24,18 +29,21 @@ public class ProdutoService {
     private final ProdutoRepository produtoRepository;
     private final CompatibilidadeProdutoRepository compatibilidadeRepository;
     private final ModeloRepository modeloRepository;
-    private final UploadService uploadService; // ✅ INJETADO
+    private final UploadService uploadService;
+    private final ProdutoFotoRepository produtoFotoRepository;
 
     public ProdutoService(
             ProdutoRepository produtoRepository,
             CompatibilidadeProdutoRepository compatibilidadeRepository,
             ModeloRepository modeloRepository,
-            UploadService uploadService // ✅ INJETADO NO CONSTRUTOR
+            UploadService uploadService,
+            ProdutoFotoRepository produtoFotoRepository
     ) {
         this.produtoRepository = produtoRepository;
         this.compatibilidadeRepository = compatibilidadeRepository;
         this.modeloRepository = modeloRepository;
         this.uploadService = uploadService;
+        this.produtoFotoRepository = produtoFotoRepository;
     }
 
     // ===== CRUD BÁSICO =====
@@ -52,7 +60,6 @@ public class ProdutoService {
                 .atualizadoEm(LocalDateTime.now())
                 .build();
 
-        // Valida compatibilidades ANTES de salvar
         if (dto.getCompatibilidades() != null) {
             for (CompatibilidadeProdutoRequestDTO c : dto.getCompatibilidades()) {
                 Modelo modelo = modeloRepository.findById(c.getModeloId())
@@ -84,7 +91,6 @@ public class ProdutoService {
         produto.setEstoque(dto.getEstoque());
         produto.setAtualizadoEm(LocalDateTime.now());
 
-        // Recria compatibilidades (só salva se todas forem válidas)
         produto.getCompatibilidades().clear();
         if (dto.getCompatibilidades() != null) {
             for (CompatibilidadeProdutoRequestDTO c : dto.getCompatibilidades()) {
@@ -127,18 +133,13 @@ public class ProdutoService {
         Produto produto = produtoRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Produto não encontrado"));
 
-        // Excluir imagens no Cloudinary antes de remover do banco
         produto.getFotos().forEach(f -> {
-            // Pode existir dado antigo sem publicId; proteja
             try {
-                // se você deixou NOT NULL, esse if é opcional
                 var publicIdField = f.getPublicId();
                 if (publicIdField != null && !publicIdField.isBlank()) {
                     uploadService.deletarImagem(publicIdField);
                 }
-            } catch (Exception ignored) {
-                // não derrube a exclusão do produto se um delete de imagem falhar
-            }
+            } catch (Exception ignored) {}
         });
 
         produtoRepository.delete(produto);
@@ -215,7 +216,7 @@ public class ProdutoService {
         return toResponse(produto);
     }
 
-    // ===== CONVERSÃO =====
+    // ===== MAPEAMENTO =====
 
     private ProdutoResponseDTO toResponse(Produto produto) {
         return ProdutoResponseDTO.builder()
@@ -229,12 +230,16 @@ public class ProdutoService {
                         produto.getCompatibilidades().stream()
                                 .map(c -> CompatibilidadeProdutoResponseDTO.builder()
                                         .id(c.getId())
-                                        .modeloNome(c.getModelo().getNome())
+                                        // NOVOS:
+                                        .marcaId(c.getModelo().getMarca().getId())
+                                        .modeloId(c.getModelo().getId())
+                                        // Já existiam:
                                         .marcaNome(c.getModelo().getMarca().getNome())
+                                        .modeloNome(c.getModelo().getNome())
                                         .anoInicial(c.getAnoInicial())
                                         .anoFinal(c.getAnoFinal())
                                         .build())
-                                .collect(Collectors.toList())
+                                .collect(java.util.stream.Collectors.toList())
                 )
                 .fotos(
                         produto.getFotos().stream()
@@ -243,8 +248,63 @@ public class ProdutoService {
                                         .url(f.getUrl())
                                         .publicId(f.getPublicId())
                                         .build())
-                                .collect(Collectors.toList())
+                                .collect(java.util.stream.Collectors.toList())
                 )
                 .build();
+    }
+
+    // ===== PAGINAÇÃO (HOME/ADMIN) =====
+
+    public Page<ProdutoListItemDTO> listarPaginado(boolean somenteAtivos, Pageable pageable) {
+        Page<ProdutoListItemDTO> page = somenteAtivos
+                ? produtoRepository.findPageLightAtivos(pageable)
+                : produtoRepository.findPageLight(pageable);
+
+        enrichFotos(page);
+        return page;
+    }
+
+    public Page<ProdutoListItemDTO> listarPaginadoFiltrado(
+            Long marcaId,
+            Long modeloId,
+            Integer ano,
+            boolean somenteAtivos,
+            Pageable pageable,
+            String q
+    ) {
+        boolean semFiltros = (marcaId == null && modeloId == null && ano == null);
+        boolean semBusca = (q == null || q.isBlank());
+        if (semFiltros && semBusca) {
+            return listarPaginado(somenteAtivos, pageable);
+        }
+
+        Page<ProdutoListItemDTO> page = (!semBusca)
+                ? produtoRepository.searchPageLight(marcaId, modeloId, ano, q.trim(), somenteAtivos, pageable)
+                : produtoRepository.findPageLightFiltrado(marcaId, modeloId, ano, somenteAtivos, pageable);
+
+        enrichFotos(page);
+        return page;
+    }
+
+    private void enrichFotos(Page<ProdutoListItemDTO> page) {
+        List<Long> ids = page.getContent().stream().map(ProdutoListItemDTO::getId).toList();
+        if (ids.isEmpty()) return;
+
+        Map<Long, String> map = new HashMap<>();
+
+        List<FotoDestaqueRow> destaques = produtoFotoRepository.findDestaqueForProdutos(ids);
+        for (FotoDestaqueRow row : destaques) {
+            map.put(row.getProdutoId(), row.getUrl());
+        }
+
+        List<Long> faltando = ids.stream().filter(id -> !map.containsKey(id)).toList();
+        if (!faltando.isEmpty()) {
+            List<FotoDestaqueRow> primeiros = produtoFotoRepository.findPrimeiraFotoForProdutos(faltando);
+            for (FotoDestaqueRow row : primeiros) {
+                map.putIfAbsent(row.getProdutoId(), row.getUrl());
+            }
+        }
+
+        page.getContent().forEach(dto -> dto.setFotoDestaqueUrl(map.get(dto.getId())));
     }
 }
