@@ -13,6 +13,7 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -29,17 +30,17 @@ public class SecurityConfig {
 
     public SecurityConfig(UserDetailsService userDetailsService,
                           PasswordEncoder passwordEncoder) {
-        this.userDetailsService = userDetailsService;
-        this.passwordEncoder = passwordEncoder;
+        this.userDetailsService = userDetailsService; // seu UsuarioService
+        this.passwordEncoder = passwordEncoder;       // vem do PasswordConfig
     }
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
-                .cors(Customizer.withDefaults()) // <=== HABILITA CORS
+                .cors(Customizer.withDefaults()) // <<< habilita CORS usando o bean abaixo
                 .authorizeHttpRequests(auth -> auth
-                        // liberar preflight
+                        // libera preflight
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
                         // Auth
@@ -59,26 +60,24 @@ public class SecurityConfig {
 
                         .anyRequest().authenticated()
                 )
-                // 401 sem popup do browser
+                // 401 sem popup de login do browser
                 .exceptionHandling(e -> e.authenticationEntryPoint((req, res, ex) -> res.sendError(401)))
                 .httpBasic(Customizer.withDefaults());
 
         return http.build();
     }
 
-    // === CORS CONFIG ===
+    // CORS para dev local + domínios públicos
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration conf = new CorsConfiguration();
-        // inclua aqui as origens que vão chamar sua API
         conf.setAllowedOrigins(Arrays.asList(
                 "http://localhost:3000",
                 "http://localhost:5173",
-                "https://revisa-site.onrender.com",        // se consumir de lá
-                "https://SEU-DOMINIO-NETLIFY.netlify.app"  // depois troque pelo real
+                "https://revisa-site.onrender.com",            // se consumir da própria API
+                "https://SEU-DOMINIO-NETLIFY.netlify.app"      // troque depois pelo domínio real do front
         ));
         conf.setAllowedMethods(List.of("GET","POST","PUT","DELETE","PATCH","OPTIONS"));
-        // IMPORTANTES para preflight com Authorization
         conf.setAllowedHeaders(List.of("*","Authorization","Content-Type"));
         conf.setExposedHeaders(List.of("Location"));
         conf.setAllowCredentials(true);
