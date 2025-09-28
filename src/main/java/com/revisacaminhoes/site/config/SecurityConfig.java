@@ -44,6 +44,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/marcas/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/modelos/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/produtos/*/fotos/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/site/settings/public").permitAll()
 
                         // Mutações só admin
                         .requestMatchers(HttpMethod.POST, "/api/**").hasRole("ADMIN")
