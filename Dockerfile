@@ -16,6 +16,6 @@ RUN mvn -q -DskipTests \
 FROM eclipse-temurin:21-jre-jammy
 WORKDIR /app
 COPY --from=build /app/target/*.jar app.jar
-ENV JAVA_OPTS="-XX:+UseG1GC -XX:MaxRAMPercentage=75" PORT=8080
+ENV JAVA_OPTS="-Xms128m -Xmx320m -XX:MaxMetaspaceSize=128m -XX:+UseG1GC -XX:+ExitOnOutOfMemoryError"
 EXPOSE 8080
 CMD ["sh","-c","java $JAVA_OPTS -Dserver.port=$PORT -jar app.jar"]
