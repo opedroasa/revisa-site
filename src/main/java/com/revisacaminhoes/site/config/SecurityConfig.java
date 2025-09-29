@@ -74,8 +74,8 @@ public class SecurityConfig {
         conf.setAllowedOrigins(Arrays.asList(
                 "http://localhost:3000",
                 "http://localhost:5173",
-                "https://revisa-site.onrender.com",            // se consumir da própria API
-                "https://SEU-DOMINIO-NETLIFY.netlify.app"      // troque depois pelo domínio real do front
+                "https://revisa-site.onrender.com",
+                "https://revisacaminhoes.netlify.app"
         ));
         conf.setAllowedMethods(List.of("GET","POST","PUT","DELETE","PATCH","OPTIONS"));
         conf.setAllowedHeaders(List.of("*","Authorization","Content-Type"));
