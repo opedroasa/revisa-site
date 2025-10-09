@@ -14,8 +14,15 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.Arrays;
+import java.util.List;
+
 @Configuration
-@EnableMethodSecurity // caso queira usar @PreAuthorize no futuro
+@EnableMethodSecurity
 public class SecurityConfig {
 
     private final UserDetailsService userDetailsService;
@@ -23,18 +30,18 @@ public class SecurityConfig {
 
     public SecurityConfig(UserDetailsService userDetailsService,
                           PasswordEncoder passwordEncoder) {
-        this.userDetailsService = userDetailsService; // é o seu UsuarioService
+        this.userDetailsService = userDetailsService; // seu UsuarioService
         this.passwordEncoder = passwordEncoder;       // vem do PasswordConfig
     }
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http.csrf(AbstractHttpConfigurer::disable)
+        http
+                .csrf(AbstractHttpConfigurer::disable)
+                .cors(Customizer.withDefaults()) // <<< habilita CORS usando o bean abaixo
                 .authorizeHttpRequests(auth -> auth
-                        // Libera preflight
+                        // libera preflight
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        //.requestMatchers("/api/auth/register").permitAll() // para criar o primeiro usuario
-                        //.requestMatchers("/api/auth/register").hasRole("ADMIN") // depois de criado usuario
 
                         // Auth
                         .requestMatchers("/api/auth/register").hasRole("ADMIN")
@@ -47,23 +54,43 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/site/settings/public").permitAll()
 
                         // Mutações só admin
-                        .requestMatchers(HttpMethod.POST, "/api/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.PUT,  "/api/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.DELETE,"/api/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.POST,   "/api/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT,    "/api/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/**").hasRole("ADMIN")
 
                         .anyRequest().authenticated()
                 )
-                // 401 sem "WWW-Authenticate: Basic" (evita popup do navegador)
+                // 401 sem popup de login do browser
                 .exceptionHandling(e -> e.authenticationEntryPoint((req, res, ex) -> res.sendError(401)))
                 .httpBasic(Customizer.withDefaults());
 
         return http.build();
     }
 
+    // CORS para dev local + domínios públicos
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration conf = new CorsConfiguration();
+        conf.setAllowedOrigins(Arrays.asList(
+                "http://localhost:3000",
+                "http://localhost:5173",
+                "https://revisa-site.onrender.com",
+                "https://revisacaminhoes.netlify.app"
+        ));
+        conf.setAllowedMethods(List.of("GET","POST","PUT","DELETE","PATCH","OPTIONS"));
+        conf.setAllowedHeaders(List.of("*","Authorization","Content-Type"));
+        conf.setExposedHeaders(List.of("Location"));
+        conf.setAllowCredentials(true);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", conf);
+        return source;
+    }
+
     @Bean
     public DaoAuthenticationProvider authProvider() {
         var provider = new DaoAuthenticationProvider();
-        provider.setUserDetailsService(userDetailsService); // seu UsuarioService
+        provider.setUserDetailsService(userDetailsService);
         provider.setPasswordEncoder(passwordEncoder);
         return provider;
     }
