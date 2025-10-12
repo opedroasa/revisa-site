@@ -86,7 +86,7 @@
 	</dependencies>
 
 	<build>
-		<!-- Não filtrar os recursos (evita o erro no application.properties/R_seed_iniciais.sql) -->
+		<!-- Não filtrar os recursos (evita o erro no application.properties/R__seed_iniciais.sql) -->
 		<resources>
 			<resource>
 				<directory>src/main/resources</directory>

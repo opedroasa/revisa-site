@@ -7,6 +7,7 @@ import com.revisacaminhoes.site.entities.Modelo;
 import com.revisacaminhoes.site.repositories.MarcaRepository;
 import com.revisacaminhoes.site.repositories.ModeloRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -95,24 +96,30 @@ public class ModeloService {
     }
 
     // Listar todos os modelos
+    @Transactional(readOnly = true)
     public List<ModeloResponseDTO> listarModelos() {
-        return modeloRepository.findAll().stream()
-                .map(this::toResponseDTO)
-                .collect(Collectors.toList());
+        var entidades = modeloRepository.findAllWithMarca();
+        return entidades.stream().map(this::toResponseDTO).toList();
     }
 
     // Listar modelos ativos
+    @Transactional(readOnly = true)
     public List<ModeloResponseDTO> listarModelosAtivos() {
-        return modeloRepository.findByAtivoTrue().stream()
-                .map(this::toResponseDTO)
-                .collect(Collectors.toList());
+        var entidades = modeloRepository.findAllAtivosWithMarca();
+        return entidades.stream().map(this::toResponseDTO).toList();
     }
 
     // Listar por marca
+    @Transactional(readOnly = true)
     public List<ModeloResponseDTO> listarPorMarca(Long marcaId) {
-        return modeloRepository.findByMarcaId(marcaId).stream()
-                .map(this::toResponseDTO)
-                .collect(Collectors.toList());
+        var entidades = modeloRepository.findByMarcaIdWithMarca(marcaId);
+        return entidades.stream().map(this::toResponseDTO).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<ModeloResponseDTO> listarAtivosPorMarca(Long marcaId) {
+        var entidades = modeloRepository.findByMarcaIdAndAtivoTrueWithMarca(marcaId);
+        return entidades.stream().map(this::toResponseDTO).toList();
     }
 
     // Buscar por ID
