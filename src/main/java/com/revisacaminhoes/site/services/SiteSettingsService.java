@@ -18,7 +18,6 @@ public class SiteSettingsService {
             SiteSettings s = SiteSettings.builder()
                     .id(1L)
                     .whatsappPhone(null)
-                    .aboutHtml("<h1>Sobre nós</h1><p>Lorem ipsum...</p>")
                     .updatedAt(LocalDateTime.now())
                     .build();
             return repo.save(s);
@@ -29,7 +28,6 @@ public class SiteSettingsService {
         SiteSettings s = getOrCreate();
         return SiteSettingsDTO.builder()
                 .whatsappPhone(s.getWhatsappPhone())
-                .aboutHtml(s.getAboutHtml())
                 .build();
     }
 
@@ -40,7 +38,6 @@ public class SiteSettingsService {
     public SiteSettingsDTO update(SiteSettingsDTO dto) {
         SiteSettings s = getOrCreate();
         s.setWhatsappPhone(dto.getWhatsappPhone());
-        s.setAboutHtml(dto.getAboutHtml());
         s.setUpdatedAt(LocalDateTime.now());
         repo.save(s);
         return getPublic();
