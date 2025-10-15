@@ -40,6 +40,11 @@ public class ModeloController {
         return ResponseEntity.ok(modeloService.listarPorMarca(marcaId));
     }
 
+    @GetMapping("/marca/{marcaId}/ativos")
+    public ResponseEntity<List<ModeloResponseDTO>> ativosPorMarca(@PathVariable Long marcaId) {
+        return ResponseEntity.ok(modeloService.listarAtivosPorMarca(marcaId));
+    }
+
     // Buscar modelo por ID
     @GetMapping("/{id}")
     public ResponseEntity<ModeloResponseDTO> buscar(@PathVariable Long id) {

@@ -7,6 +7,11 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.data.jpa.repository.EntityGraph;
+
+import java.util.List;
+import java.util.Optional;
+
 
 public interface ProdutoRepository extends JpaRepository<Produto, Long> {
 
@@ -100,4 +105,33 @@ public interface ProdutoRepository extends JpaRepository<Produto, Long> {
             @Param("somenteAtivos") boolean somenteAtivos,
             Pageable pageable
     );
+
+    /**
+     * Lista só ativos, já trazendo as compatibilidades (modelo->marca).
+     * FOTOS **NÃO** são fetch join aqui (evita MultipleBagFetchException).
+     */
+    @Query("""
+       select distinct p
+       from Produto p
+       left join fetch p.compatibilidades c
+       left join fetch c.modelo m
+       left join fetch m.marca
+       where p.ativo = true
+       order by p.id desc
+       """)
+    List<Produto> findAtivosComCompat();
+
+    /**
+     * Detalhe por id, já com compatibilidades (modelo->marca).
+     * FOTOS **NÃO** são fetch join aqui (evita MultipleBagFetchException).
+     */
+    @Query("""
+       select distinct p
+       from Produto p
+       left join fetch p.compatibilidades c
+       left join fetch c.modelo m
+       left join fetch m.marca
+       where p.id = :id
+       """)
+    Optional<Produto> findByIdComCompat(@Param("id") Long id);
 }

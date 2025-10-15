@@ -145,22 +145,27 @@ public class ProdutoService {
         produtoRepository.delete(produto);
     }
 
+    @Transactional(readOnly = true)
     public List<ProdutoResponseDTO> listarTodos() {
         return produtoRepository.findAll().stream()
                 .map(this::toResponse)
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public List<ProdutoResponseDTO> listarAtivos() {
-        return produtoRepository.findAll().stream()
-                .filter(Produto::getAtivo)
+        return produtoRepository.findAtivosComCompat()
+                .stream()
                 .map(this::toResponse)
-                .collect(Collectors.toList());
+                .toList();
     }
 
+
+    @Transactional(readOnly = true)
     public ProdutoResponseDTO buscarPorId(Long id) {
-        Produto produto = produtoRepository.findById(id)
+        var produto = produtoRepository.findByIdComCompat(id)
                 .orElseThrow(() -> new RuntimeException("Produto não encontrado"));
+        // Aqui, dentro da transação, acessar produto.getFotos() NÃO dá LazyInitializationException.
         return toResponse(produto);
     }
 
