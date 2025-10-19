@@ -21,6 +21,8 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import java.util.Arrays;
 import java.util.List;
 
+import static org.springframework.security.config.Customizer.withDefaults;
+
 @Configuration
 @EnableMethodSecurity
 public class SecurityConfig {
@@ -37,8 +39,10 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
+                .cors(withDefaults())
+                .csrf(csrf -> csrf.disable())
                 .csrf(AbstractHttpConfigurer::disable)
-                .cors(Customizer.withDefaults()) // <<< habilita CORS usando o bean abaixo
+                .cors(withDefaults()) // <<< habilita CORS usando o bean abaixo
                 .authorizeHttpRequests(auth -> auth
                         // libera preflight
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
@@ -46,12 +50,19 @@ public class SecurityConfig {
                         // Auth
                         .requestMatchers("/api/auth/register").hasRole("ADMIN")
 
-                        // Públicos (vitrine)
-                        .requestMatchers(HttpMethod.GET, "/api/produtos/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/marcas/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/modelos/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/produtos/*/fotos/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/site/settings/public").permitAll()
+                        // Páginas públicas
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/produtos/**",
+                                "/api/produtos",          // listagem
+                                "/api/produtos/ativos",   // sua lista de ativos
+                                "/api/produtos/filtro",   // se existir
+                                "/api/produto-fotos/**",  // se expõe imagem pública
+                                "/api/marcas/**",
+                                "/api/modelos/**",
+                                "/api/modelosativos",
+                                "/api/site-settings/**",
+                                "/error"
+                        ).permitAll()
 
                         // Mutações só admin
                         .requestMatchers(HttpMethod.POST,   "/api/**").hasRole("ADMIN")
@@ -62,30 +73,12 @@ public class SecurityConfig {
                 )
                 // 401 sem popup de login do browser
                 .exceptionHandling(e -> e.authenticationEntryPoint((req, res, ex) -> res.sendError(401)))
-                .httpBasic(Customizer.withDefaults());
+                .httpBasic(withDefaults());
 
         return http.build();
     }
 
-    // CORS para dev local + domínios públicos
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration conf = new CorsConfiguration();
-        conf.setAllowedOrigins(Arrays.asList(
-                "http://localhost:3000",
-                "http://localhost:5173",
-                "https://revisa-site.onrender.com",
-                "https://revisacaminhoes.netlify.app"
-        ));
-        conf.setAllowedMethods(List.of("GET","POST","PUT","DELETE","PATCH","OPTIONS"));
-        conf.setAllowedHeaders(List.of("*","Authorization","Content-Type"));
-        conf.setExposedHeaders(List.of("Location"));
-        conf.setAllowCredentials(true);
 
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", conf);
-        return source;
-    }
 
     @Bean
     public DaoAuthenticationProvider authProvider() {
