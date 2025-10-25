@@ -44,6 +44,13 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(withDefaults()) // <<< habilita CORS usando o bean abaixo
                 .authorizeHttpRequests(auth -> auth
+
+                        .requestMatchers("/api/auth/register-email").hasRole("ADMIN")
+                        .requestMatchers("/api/usuarios/**").hasRole("ADMIN")
+                        .requestMatchers("/api/auth/password/**").permitAll()
+                        .requestMatchers("/api/auth/check").permitAll()
+
+
                         // libera preflight
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
@@ -92,4 +99,6 @@ public class SecurityConfig {
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
         return config.getAuthenticationManager();
     }
+
+
 }
