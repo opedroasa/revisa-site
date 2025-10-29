@@ -30,6 +30,7 @@ public class ModeloService {
     }
 
     // Criar novo modelo a partir do DTO
+    @Transactional
     public ModeloResponseDTO criarModelo(ModeloRequestDTO dto) {
         Marca marca = marcaRepository.findById(dto.getMarcaId())
                 .orElseThrow(() -> new RuntimeException("Marca não encontrada"));
@@ -47,6 +48,7 @@ public class ModeloService {
     }
 
     // Atualizar modelo existente
+    @Transactional
     public ModeloResponseDTO atualizarModelo(Long id, ModeloRequestDTO dto) {
         Modelo modelo = modeloRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Modelo não encontrado"));
@@ -129,12 +131,16 @@ public class ModeloService {
 
     // Conversão para ResponseDTO
     private ModeloResponseDTO toResponseDTO(Modelo modelo) {
+        var marca = modelo.getMarca(); // ainda dentro da @Transactional
+        Long marcaId = (marca != null) ? marca.getId() : null;     // toca no proxy
+        String marcaNome = (marca != null) ? marca.getNome() : null;
+
         return ModeloResponseDTO.builder()
                 .id(modelo.getId())
                 .nome(modelo.getNome())
                 .ativo(modelo.getAtivo())
-                .marcaNome(modelo.getMarca().getNome())
-                .marcaId(modelo.getMarca().getId())
+                .marcaId(marcaId)
+                .marcaNome(marcaNome)
                 .build();
     }
 }

@@ -182,6 +182,7 @@ public class ProdutoService {
 
     // ===== AJUSTE DE ESTOQUE =====
 
+    @Transactional
     public ProdutoResponseDTO definirEstoque(Long id, int quantidade) {
         if (quantidade < 0) throw new RuntimeException("Quantidade não pode ser negativa.");
         Produto produto = produtoRepository.findById(id)
@@ -194,6 +195,7 @@ public class ProdutoService {
         return toResponse(produto);
     }
 
+    @Transactional
     public ProdutoResponseDTO entradaEstoque(Long id, int quantidade) {
         if (quantidade <= 0) throw new RuntimeException("Quantidade deve ser maior que zero.");
         Produto produto = produtoRepository.findById(id)
@@ -206,6 +208,7 @@ public class ProdutoService {
         return toResponse(produto);
     }
 
+    @Transactional
     public ProdutoResponseDTO saidaEstoque(Long id, int quantidade) {
         if (quantidade <= 0) throw new RuntimeException("Quantidade deve ser maior que zero.");
         Produto produto = produtoRepository.findById(id)
@@ -217,6 +220,7 @@ public class ProdutoService {
         produto.setEstoque(novoEstoque);
         produto.setAtualizadoEm(LocalDateTime.now());
         produtoRepository.save(produto);
+
 
         return toResponse(produto);
     }

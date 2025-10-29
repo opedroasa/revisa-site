@@ -148,10 +148,11 @@ WHERE NOT EXISTS (
 
 -- ====== USUÁRIOS INICIAIS (idempotente) ======
 -- senha: hash bcrypt enviado por você
-INSERT INTO public.usuario (password, role, username)
-SELECT '$2a$10$S5SJgI99cSHRVqHpnkzUZOgR3o8totfO72Nu9dS7hyJ1lPuasY4hW', 'ADMIN', 'admin'
+
+INSERT INTO public.usuario (password, role, username, email, ativo)
+SELECT '$2a$10$S5SJgI99cSHRVqHpnkzUZOgR3o8totfO72Nu9dS7hyJ1lPuasY4hW', 'ADMIN', 'admin', 'admin@local', TRUE
 WHERE NOT EXISTS (SELECT 1 FROM public.usuario u WHERE u.username = 'admin');
 
-INSERT INTO public.usuario (password, role, username)
-SELECT '$2a$10$S5SJgI99cSHRVqHpnkzUZOgR3o8totfO72Nu9dS7hyJ1lPuasY4hW', 'ADMIN', 'pedro'
+INSERT INTO public.usuario (password, role, username, email, ativo)
+SELECT '$2a$10$S5SJgI99cSHRVqHpnkzUZOgR3o8totfO72Nu9dS7hyJ1lPuasY4hW', 'ADMIN', 'pedro', 'pedro@local', TRUE
 WHERE NOT EXISTS (SELECT 1 FROM public.usuario u WHERE u.username = 'pedro');
