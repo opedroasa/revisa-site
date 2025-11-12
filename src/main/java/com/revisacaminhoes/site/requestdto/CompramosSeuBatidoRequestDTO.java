@@ -1,5 +1,6 @@
 package com.revisacaminhoes.site.requestdto;
 
+import com.revisacaminhoes.site.validation.CPF;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Email;
 
@@ -11,7 +12,8 @@ public class CompramosSeuBatidoRequestDTO {
     private String nome;
 
     @NotBlank(message = "CPF é obrigatório")
-    private String cpf;
+    @CPF(message = "CPF inválido") // <<< APLICAR ANNOTATION
+    private String cpf;;
 
     @NotBlank(message = "Telefone é obrigatório")
     private String telefone;

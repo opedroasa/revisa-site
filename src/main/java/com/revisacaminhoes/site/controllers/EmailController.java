@@ -5,6 +5,7 @@ import com.revisacaminhoes.site.requestdto.FaleConoscoRequestDTO;
 import com.revisacaminhoes.site.responsedto.EmailResponseDTO;
 import com.revisacaminhoes.site.services.EmailService;
 import jakarta.validation.Valid;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;

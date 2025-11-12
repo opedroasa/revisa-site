@@ -67,9 +67,17 @@ public class SecurityConfig {
                                 "/api/marcas/**",
                                 "/api/modelos/**",
                                 "/api/modelosativos",
-                                "/api/site-settings/**",
+                                "/api/site/settings/**",
                                 "/error"
                         ).permitAll()
+
+                        // Páginas públicas (POST) - Formulários de Contato/Email
+                        // Essas regras DEVEM vir ANTES das regras restritivas de POST
+                        .requestMatchers(HttpMethod.POST,
+                                "/api/email/compramos-seu-batido",
+                                "/api/email/fale-conosco"
+                        ).permitAll()
+                        // Fim da correção
 
                         // Mutações só admin
                         .requestMatchers(HttpMethod.POST,   "/api/**").hasRole("ADMIN")
