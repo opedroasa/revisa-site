@@ -28,10 +28,12 @@ public class EmailService {
         this.mailSender = mailSender;
     }
 
-    public void enviarCompramosSeuBatido(CompramosSeuBatidoRequestDTO dto, List<MultipartFile> fotos) throws Exception {
+    // <<< MUDANÇA 1: Assinatura agora aceita clientIp >>>
+    public void enviarCompramosSeuBatido(CompramosSeuBatidoRequestDTO dto, List<MultipartFile> fotos, String clientIp) throws Exception {
         final String assunto = "Proposta - Compramos seu batido (" +
                 safe(dto.getMarca()) + " " + safe(dto.getModelo()) + " - " + safe(dto.getAnoModelo()) + ")";
 
+        // <<< MUDANÇA 2: Adicionado IP ao template HTML >>>
         final String html = """
         <div style="font-family:Arial,sans-serif">
           <h2>Compramos seu batido - Solicitação</h2>
@@ -39,11 +41,13 @@ public class EmailService {
           <p><b>CPF:</b> %s</p>
           <p><b>Telefone:</b> %s</p>
           <p><b>E-mail:</b> %s</p>
+          <hr/>
           <p><b>Marca:</b> %s</p>
           <p><b>Modelo:</b> %s</p>
           <p><b>Ano-Modelo:</b> %s</p>
           <hr/>
           <p>Fotos em anexo.</p>
+          <p style="font-size:0.8em; color:#777;">IP de Origem: %s</p>
         </div>
     """.formatted(
                 esc(dto.getNome()),
@@ -52,7 +56,8 @@ public class EmailService {
                 esc(dto.getEmail() == null ? "" : dto.getEmail()),
                 esc(dto.getMarca()),
                 esc(dto.getModelo()),
-                esc(dto.getAnoModelo())
+                esc(dto.getAnoModelo()),
+                esc(clientIp) // <<< MUDANÇA 3: IP passado para o .formatted()
         );
 
         // usa Reply-To se o usuário informou e-mail
@@ -61,8 +66,11 @@ public class EmailService {
         enviarComAnexos(assunto, html, replyTo, fotos);
     }
 
-    public void enviarFaleConosco(FaleConoscoRequestDTO dto) throws Exception {
+    // <<< MUDANÇA 4: Assinatura agora aceita clientIp >>>
+    public void enviarFaleConosco(FaleConoscoRequestDTO dto, String clientIp) throws Exception {
         final String assunto = "Fale Conosco - " + safe(dto.getMotivo()) + " - " + safe(dto.getNome());
+
+        // <<< MUDANÇA 5: Adicionado IP ao template HTML >>>
         final String html = """
             <div style="font-family:Arial,sans-serif">
               <h2>Fale Conosco</h2>
@@ -71,12 +79,15 @@ public class EmailService {
               <p><b>Motivo:</b> %s</p>
               <p><b>Mensagem:</b></p>
               <p style="white-space:pre-wrap">%s</p>
+              <hr/>
+              <p style="font-size:0.8em; color:#777;">IP de Origem: %s</p>
             </div>
         """.formatted(
                 esc(dto.getNome()),
                 esc(dto.getEmail()),
                 esc(String.valueOf(dto.getMotivo())),
-                esc(dto.getMensagem())
+                esc(dto.getMensagem()),
+                esc(clientIp) // <<< MUDANÇA 6: IP passado para o .formatted()
         );
 
         // Reply-To para facilitar responder direto ao usuário

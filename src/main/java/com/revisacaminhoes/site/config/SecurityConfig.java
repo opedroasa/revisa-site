@@ -2,10 +2,10 @@ package com.revisacaminhoes.site.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
-import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -13,13 +13,6 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
-
-import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.CorsConfigurationSource;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-
-import java.util.Arrays;
-import java.util.List;
 
 import static org.springframework.security.config.Customizer.withDefaults;
 
@@ -32,67 +25,86 @@ public class SecurityConfig {
 
     public SecurityConfig(UserDetailsService userDetailsService,
                           PasswordEncoder passwordEncoder) {
-        this.userDetailsService = userDetailsService; // seu UsuarioService
-        this.passwordEncoder = passwordEncoder;       // vem do PasswordConfig
+        this.userDetailsService = userDetailsService;
+        this.passwordEncoder = passwordEncoder;
     }
 
+    /**
+     * ========================================================================
+     * CADEIA DE FILTROS 1: ROTAS PÚBLICAS (Prioridade 1)
+     * ========================================================================
+     */
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    @Order(1) // <<< RODA PRIMEIRO
+    public SecurityFilterChain publicApiSecurity(HttpSecurity http) throws Exception {
         http
                 .cors(withDefaults())
-                .csrf(csrf -> csrf.disable())
                 .csrf(AbstractHttpConfigurer::disable)
-                .cors(withDefaults()) // <<< habilita CORS usando o bean abaixo
-                .authorizeHttpRequests(auth -> auth
 
+                // 2. Define quais rotas esta cadeia deve capturar
+                .securityMatcher(
+                        "/api/auth/password/**",
+                        "/api/email/compramos-seu-batido",
+                        "/api/email/fale-conosco",
+                        "/api/produtos/**",
+                        "/api/produtos",
+                        "/api/produtos/ativos",
+                        "/api/produtos/filtro",
+                        "/api/produto-fotos/**",
+                        "/api/marcas/**",
+                        "/api/modelos/**",
+                        "/api/modelosativos",
+                        "/api/site/settings/**",
+                        "/error"
+                        // <<< REMOVIDO: "/api/**" (era o que estava quebrando o login)
+                )
+
+                .authorizeHttpRequests(auth -> auth
+                        // O CorsFilter (em CorsConfig.java) já cuida do OPTIONS
+                        .anyRequest().permitAll()
+                )
+
+                .exceptionHandling(e -> e.authenticationEntryPoint((req, res, ex) -> res.sendError(401)));
+
+        return http.build();
+    }
+
+    /**
+     * ========================================================================
+     * CADEIA DE FILTROS 2: ROTAS PRIVADAS (Prioridade 2)
+     * ========================================================================
+     */
+    @Bean
+    @Order(2) // <<< RODA DEPOIS
+    public SecurityFilterChain privateApiSecurity(HttpSecurity http) throws Exception {
+        http
+                .cors(withDefaults())
+                .csrf(AbstractHttpConfigurer::disable)
+
+                // 2. Captura todas as rotas da API (que não foram capturadas pela Cadeia 1)
+                .securityMatcher("/api/**")
+
+                .authorizeHttpRequests(auth -> auth
+                        // (As rotas públicas já foram capturadas pela Cadeia 1)
+                        // A rota /api/auth/check vai cair aqui agora e será autenticada
+
+                        // Regras de Admin
                         .requestMatchers("/api/auth/register-email").hasRole("ADMIN")
                         .requestMatchers("/api/usuarios/**").hasRole("ADMIN")
-                        .requestMatchers("/api/auth/password/**").permitAll()
-                        .requestMatchers("/api/auth/check").permitAll()
-
-
-                        // libera preflight
-                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-
-                        // Auth
                         .requestMatchers("/api/auth/register").hasRole("ADMIN")
-
-                        // Páginas públicas
-                        .requestMatchers(HttpMethod.GET,
-                                "/api/produtos/**",
-                                "/api/produtos",          // listagem
-                                "/api/produtos/ativos",   // sua lista de ativos
-                                "/api/produtos/filtro",   // se existir
-                                "/api/produto-fotos/**",  // se expõe imagem pública
-                                "/api/marcas/**",
-                                "/api/modelos/**",
-                                "/api/modelosativos",
-                                "/api/site/settings/**",
-                                "/error"
-                        ).permitAll()
-
-                        // Páginas públicas (POST) - Formulários de Contato/Email
-                        // Essas regras DEVEM vir ANTES das regras restritivas de POST
-                        .requestMatchers(HttpMethod.POST,
-                                "/api/email/compramos-seu-batido",
-                                "/api/email/fale-conosco"
-                        ).permitAll()
-                        // Fim da correção
-
-                        // Mutações só admin
                         .requestMatchers(HttpMethod.POST,   "/api/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT,    "/api/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/**").hasRole("ADMIN")
 
                         .anyRequest().authenticated()
                 )
-                // 401 sem popup de login do browser
-                .exceptionHandling(e -> e.authenticationEntryPoint((req, res, ex) -> res.sendError(401)))
-                .httpBasic(withDefaults());
+
+                .httpBasic(withDefaults())
+
+                .exceptionHandling(e -> e.authenticationEntryPoint((req, res, ex) -> res.sendError(401)));
 
         return http.build();
     }
-
 
 
     @Bean
@@ -107,6 +119,4 @@ public class SecurityConfig {
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
         return config.getAuthenticationManager();
     }
-
-
 }

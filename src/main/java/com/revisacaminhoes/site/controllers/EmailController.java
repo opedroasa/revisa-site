@@ -4,8 +4,8 @@ import com.revisacaminhoes.site.requestdto.CompramosSeuBatidoRequestDTO;
 import com.revisacaminhoes.site.requestdto.FaleConoscoRequestDTO;
 import com.revisacaminhoes.site.responsedto.EmailResponseDTO;
 import com.revisacaminhoes.site.services.EmailService;
+import jakarta.servlet.http.HttpServletRequest; // <<< IMPORTADO
 import jakarta.validation.Valid;
-import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
@@ -38,9 +38,16 @@ public class EmailController {
     )
     public ResponseEntity<EmailResponseDTO> compramosSeuBatido(
             @RequestPart("dados") @Valid CompramosSeuBatidoRequestDTO dados,
-            @RequestPart(value = "fotos", required = false) List<MultipartFile> fotos
+            @RequestPart(value = "fotos", required = false) List<MultipartFile> fotos,
+            HttpServletRequest request // <<< INJETADO REQUEST
     ) throws Exception {
-        emailService.enviarCompramosSeuBatido(dados, fotos);
+
+        // <<< CAPTURADO O IP >>>
+        String clientIp = getClientIp(request);
+
+        // <<< IP PASSADO PARA O SERVICE >>>
+        emailService.enviarCompramosSeuBatido(dados, fotos, clientIp);
+
         return ResponseEntity.ok(new EmailResponseDTO("Solicitação enviada com sucesso."));
     }
 
@@ -53,9 +60,35 @@ public class EmailController {
             consumes = MediaType.APPLICATION_JSON_VALUE
     )
     public ResponseEntity<EmailResponseDTO> faleConosco(
-            @RequestBody @Valid FaleConoscoRequestDTO dados
+            @RequestBody @Valid FaleConoscoRequestDTO dados,
+            HttpServletRequest request // <<< INJETADO REQUEST
     ) throws Exception {
-        emailService.enviarFaleConosco(dados);
+
+        // <<< CAPTURADO O IP >>>
+        String clientIp = getClientIp(request);
+
+        // <<< IP PASSADO PARA O SERVICE >>>
+        emailService.enviarFaleConosco(dados, clientIp);
+
         return ResponseEntity.ok(new EmailResponseDTO("Mensagem enviada com sucesso."));
+    }
+
+    /**
+     * Helper para pegar o IP do cliente, considerando proxies (X-Forwarded-For).
+     */
+    private String getClientIp(HttpServletRequest request) {
+        String remoteAddr = "";
+        if (request != null) {
+            // Tenta pegar do header de proxy (ex: NGINX, Cloudflare)
+            remoteAddr = request.getHeader("X-Forwarded-For");
+            if (remoteAddr == null || "".equals(remoteAddr)) {
+                // Se não tiver, pega o IP da conexão direta
+                remoteAddr = request.getRemoteAddr();
+            } else if (remoteAddr.contains(",")) {
+                // Se houver múltiplos IPs (ex: proxy1, proxy2, client), pega o primeiro
+                remoteAddr = remoteAddr.split(",")[0].trim();
+            }
+        }
+        return remoteAddr;
     }
 }
